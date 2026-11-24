@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — KP Consultantsy</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand">
+        <div class="brand-badge">KP</div>
+        <span class="brand-text">KP Consultantsy</span>
+      </a>
+      <nav class="nav-actions">
+        <a href="index.html" class="btn btn-outline btn-sm">← Back to Job Feed</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth-wrapper">
+    <!-- Standard Username & Password Login -->
+    <div class="auth-card" id="loginCard">
+      <h1>Admin Sign In</h1>
+      <p>Authorized KP Consultantsy administrators only.</p>
+
+      <div id="loginAlert" class="alert"></div>
+
+      <form id="adminLoginForm" autocomplete="off">
+        <div class="form-group">
+          <label for="usernameInput">Username</label>
+          <input
+            type="text"
+            id="usernameInput"
+            name="username"
+            class="input-field"
+            placeholder="Enter admin username"
+            required
+            autocomplete="username"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="passwordInput">Password</label>
+          <input
+            type="password"
+            id="passwordInput"
+            name="password"
+            class="input-field"
+            placeholder="Enter password"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width:100%;margin-top:6px;">
+          Sign In to Dashboard
+        </button>
+      </form>
+
+      <div style="margin-top:16px;text-align:center;font-size:13.5px;">
+        <a href="#" id="showRecoveryLink">Forgot password? Recover via Mobile OTP</a>
+      </div>
+    </div>
+
+    <!-- Optional Mobile Number OTP Recovery Card -->
+    <div class="auth-card hidden" id="recoveryCard">
+      <h1>Mobile OTP Recovery</h1>
+      <p>Enter your admin username and registered mobile number to receive a one-time recovery code.</p>
+
+      <div id="recoveryAlert" class="alert"></div>
+
+      <form id="sendOtpForm">
+        <div class="form-group">
+          <label for="recUsername">Admin Username</label>
+          <input type="text" id="recUsername" class="input-field" placeholder="Enter admin username" required />
+        </div>
+
+        <div class="form-group">
+          <label for="recMobile">Registered Mobile Number</label>
+          <input type="tel" id="recMobile" class="input-field" placeholder="+919876543210" required />
+          <div class="form-hint">Must match the optional mobile number saved on your admin profile.</div>
+        </div>
+
+        <button type="submit" id="sendOtpBtn" class="btn btn-primary" style="width:100%;">
+          Send OTP
+        </button>
+      </form>
+
+      <form id="verifyOtpForm" class="hidden" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-color);">
+        <div class="form-group">
+          <label for="otpCodeInput">6-Digit OTP</label>
+          <input type="text" id="otpCodeInput" class="input-field" placeholder="123456" maxlength="6" required />
+        </div>
+
+        <div class="form-group">
+          <label for="newPasswordInput">New Password</label>
+          <input type="password" id="newPasswordInput" class="input-field" placeholder="Minimum 8 characters" minlength="8" required />
+        </div>
+
+        <button type="submit" id="resetPwdBtn" class="btn btn-primary" style="width:100%;">
+          Verify OTP &amp; Update Password
+        </button>
+      </form>
+
+      <div style="margin-top:16px;text-align:center;font-size:13.5px;">
+        <a href="#" id="backToLoginLink">← Back to Username Login</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    (function () {
+      function showBox(id, msg, isError) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = `alert show ${isError ? "alert-error" : "alert-success"}`;
+      }
+
+      document.getElementById("adminLoginForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const btn = document.getElementById("loginSubmitBtn");
+        btn.disabled = true;
+
+        try {
+          const username = document.getElementById("usernameInput").value;
+          const password = document.getElementById("passwordInput").value;
+          await window.KPAuth.loginWithUsername(username, password);
+          window.location.href = "admin.html";
+        } catch (err) {
+          showBox("loginAlert", err.message, true);
+          btn.disabled = false;
+        }
+      });
+
+      document.getElementById("showRecoveryLink").addEventListener("click", function (e) {
+        e.preventDefault();
+        document.getElementById("loginCard").classList.add("hidden");
+        document.getElementById("recoveryCard").classList.remove("hidden");
+      });
+
+      document.getElementById("backToLoginLink").addEventListener("click", function (e) {
+        e.preventDefault();
+        document.getElementById("recoveryCard").classList.add("hidden");
+        document.getElementById("loginCard").classList.remove("hidden");
+      });
+
+      document.getElementById("sendOtpForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const btn = document.getElementById("sendOtpBtn");
+        btn.disabled = true;
+
+        try {
+          const u = document.getElementById("recUsername").value;
+          const m = document.getElementById("recMobile").value;
+          const res = await window.KPAuth.requestMobileOtp(u, m);
+          showBox("recoveryAlert", res.message || "OTP sent to your registered mobile number.", false);
+          document.getElementById("verifyOtpForm").classList.remove("hidden");
+        } catch (err) {
+          showBox("recoveryAlert", err.message, true);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      document.getElementById("verifyOtpForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const btn = document.getElementById("resetPwdBtn");
+        btn.disabled = true;
+
+        try {
+          const u = document.getElementById("recUsername").value;
+          const m = document.getElementById("recMobile").value;
+          const otp = document.getElementById("otpCodeInput").value;
+          const pwd = document.getElementById("newPasswordInput").value;
+          await window.KPAuth.resetPasswordWithOtp(u, m, otp, pwd);
+          showBox("recoveryAlert", "Password updated! You may now sign in with your new password.", false);
+          document.getElementById("verifyOtpForm").classList.add("hidden");
+        } catch (err) {
+          showBox("recoveryAlert", err.message, true);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
